@@ -3,18 +3,13 @@ class Player {
         this.game = game;
         this.width = 32;
         this.height = 32;
-        this.x = 100;
-        this.y = 500;
-        this.speed = 3;
-        this.jumpForce = -12;
-        this.gravity = 0.5;
-        this.velocityY = 0;
-        this.isJumping = false;
-        this.isClimbing = false;
-        this.direction = 'right';
+        this.reset();
         
         // Player states
         this.state = 'idle'; // idle, running, jumping, climbing
+        this.isJumping = false;
+        this.isClimbing = false;
+        this.direction = 'right';
         
         // Input handling
         this.keys = {
@@ -26,6 +21,18 @@ class Player {
         };
         
         this.setupInput();
+    }
+
+    reset() {
+        this.x = 100;
+        this.y = 500;
+        this.speed = 3;
+        this.jumpForce = -12;
+        this.gravity = 0.5;
+        this.velocityY = 0;
+        this.state = 'idle';
+        this.isJumping = false;
+        this.isClimbing = false;
     }
     
     setupInput() {
@@ -84,11 +91,22 @@ class Player {
             this.state = 'idle';
         }
         
-        // Handle jumping
-        if (this.keys.jump && !this.isJumping) {
+        // Handle jumping (only if not climbing)
+        if (this.keys.jump && !this.isJumping && !this.isClimbing) {
             this.velocityY = this.jumpForce;
             this.isJumping = true;
             this.state = 'jumping';
+        }
+        
+        // Handle ladder climbing
+        if (this.isClimbing) {
+            this.state = 'climbing';
+            if (this.keys.up) {
+                this.y -= this.speed;
+            }
+            if (this.keys.down) {
+                this.y += this.speed;
+            }
         }
         
         // Apply gravity
@@ -106,6 +124,10 @@ class Player {
         if (this.x < 0) this.x = 0;
         if (this.x > this.game.canvas.width - this.width) {
             this.x = this.game.canvas.width - this.width;
+        }
+        if (this.y < 0) this.y = 0;
+        if (this.y > this.game.canvas.height - this.height) {
+            this.y = this.game.canvas.height - this.height;
         }
     }
     

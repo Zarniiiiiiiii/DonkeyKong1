@@ -21,12 +21,18 @@ class Game {
     }
     
     init() {
+        // Create level
+        this.level = new Level(this);
+        
         // Create player
         this.player = new Player(this);
     }
     
     update(deltaTime) {
-        // Update game objects
+        // Update level (handles platform and ladder collisions)
+        this.level.update(this.player, deltaTime);
+        
+        // Update player
         this.player.update();
     }
     
@@ -39,7 +45,10 @@ class Game {
         this.ctx.fillStyle = '#333';
         this.ctx.fillRect(0, 532, this.canvas.width, 68);
         
-        // Render game objects
+        // Render level (platforms and ladders)
+        this.level.render();
+        
+        // Render player
         this.player.render();
     }
     
