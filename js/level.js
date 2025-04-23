@@ -100,40 +100,45 @@ class Platform {
 
     // Gets platform surface coordinates for collision
     getSurfaceY(xPos) {
-        return this.y + Math.tan(this.angle) * (xPos - this.x);
+        // Calculate the y-coordinate of the platform surface at a given x position
+        const relativeX = xPos - this.x;
+        const slope = (this.rightY - this.leftY) / this.width;
+        return this.leftY + (relativeX * slope);
     }
 
     checkCollision(player) {
-        // Transform player coordinates to platform space
-        const dx = player.x - this.x;
-        const dy = player.y - this.y;
-        const rotatedX = dx * Math.cos(-this.angle) - dy * Math.sin(-this.angle);
-        const rotatedY = dx * Math.sin(-this.angle) + dy * Math.cos(-this.angle);
-        
-        // Check if player is within platform bounds
-        const isWithinBounds = (
-            rotatedX < this.width &&
-            rotatedX + player.width > 0 &&
-            rotatedY + player.height > 0 &&
-            rotatedY < this.height
-        );
+        // Check if player is within the platform's x-range
+        if (player.x + player.width < this.x || player.x > this.endX) {
+            return false;
+        }
 
-        if (!isWithinBounds) return false;
-
-        // Calculate the surface Y position at the player's X
+        // Get the platform surface y-coordinate at the player's x position
         const surfaceY = this.getSurfaceY(player.x + player.width/2);
         
-        // Check if player is above the platform
-        const isAbovePlatform = player.y + player.height <= surfaceY + 5;
+        // Check if player is above the platform and moving downward
+        if (player.velocityY > 0 && 
+            player.y + player.height > surfaceY && 
+            player.y + player.height < surfaceY + 20) {
+            
+            // Prevent falling through
+            player.y = surfaceY - player.height;
+            player.velocityY = 0;
+            player.isJumping = false;
+            return true;
+        }
         
-        // Check if player is moving downward
-        const isMovingDown = player.velocityY > 0;
-
-        // Only allow collision if:
-        // 1. Player is above the platform AND moving downward, OR
-        // 2. Player is hitting the side of the platform
-        return (isAbovePlatform && isMovingDown) || 
-               (!isAbovePlatform && Math.abs(rotatedX) < 5 || Math.abs(rotatedX + player.width - this.width) < 5);
+        // Check if player is below the platform and moving upward
+        if (player.velocityY < 0 && 
+            player.y < surfaceY + this.height && 
+            player.y > surfaceY - 20) {
+            
+            // Prevent jumping through
+            player.y = surfaceY + this.height;
+            player.velocityY = 0;
+            return true;
+        }
+        
+        return false;
     }
 }
 
@@ -178,172 +183,12 @@ class Ladder {
     }
 }
 
-class ImmovableBarrel {
-    constructor(game, x, y) {
-        this.game = game;
-        this.x = x;
-        this.y = y;
-        this.radius = 20;      // Horizontal radius
-        this.height = 40;      // Vertical height
-        this.bandWidth = 4;    // Width of metal bands
-        this.bandSpacing = 10; // Distance from top/bottom for bands
-    }
-
-    draw(ctx) {
-        // Save context state
-        ctx.save();
-
-        // Draw barrel body (wooden part)
-        ctx.fillStyle = "#8B4513"; // Darker brown for better contrast
-        ctx.beginPath();
-        ctx.ellipse(
-            this.x + this.radius,
-            this.y + this.height / 2,
-            this.radius,
-            this.height / 2,
-            0,
-            0,
-            2 * Math.PI
-        );
-        ctx.fill();
-
-        // Draw barrel rim highlights (top and bottom ellipses)
-        ctx.fillStyle = "#A0522D"; // Lighter brown for rim
-        ctx.beginPath();
-        ctx.ellipse(
-            this.x + this.radius,
-            this.y + 5,
-            this.radius * 0.9,
-            8,
-            0,
-            0,
-            2 * Math.PI
-        );
-        ctx.fill();
-
-        ctx.beginPath();
-        ctx.ellipse(
-            this.x + this.radius,
-            this.y + this.height - 5,
-            this.radius * 0.9,
-            8,
-            0,
-            0,
-            2 * Math.PI
-        );
-        ctx.fill();
-
-        // Draw metal bands
-        ctx.strokeStyle = "#C0C0C0"; // Silver color for bands
-        ctx.lineWidth = this.bandWidth;
-
-        // Top band
-        ctx.beginPath();
-        ctx.ellipse(
-            this.x + this.radius,
-            this.y + this.bandSpacing,
-            this.radius,
-            5,
-            0,
-            0,
-            2 * Math.PI
-        );
-        ctx.stroke();
-
-        // Bottom band
-        ctx.beginPath();
-        ctx.ellipse(
-            this.x + this.radius,
-            this.y + this.height - this.bandSpacing,
-            this.radius,
-            5,
-            0,
-            0,
-            2 * Math.PI
-        );
-        ctx.stroke();
-
-        // Add wood grain detail
-        ctx.strokeStyle = "#6B3E26"; // Darker brown for wood grain
-        ctx.lineWidth = 1;
-        
-        // Draw a few curved lines for wood grain effect
-        for (let i = 1; i < 4; i++) {
-            ctx.beginPath();
-            ctx.ellipse(
-                this.x + this.radius,
-                this.y + (this.height * i / 4),
-                this.radius * 0.8,
-                4,
-                0,
-                0,
-                2 * Math.PI
-            );
-            ctx.stroke();
-        }
-
-        // Restore context state
-        ctx.restore();
-    }
-
-    // Method to check for collision with other game objects
-    checkCollision(player) {
-        // Calculate the bounding box of the barrel
-        const left = this.x;
-        const right = this.x + this.radius * 2;
-        const top = this.y;
-        const bottom = this.y + this.height;
-
-        // Check if player is within the barrel's bounds
-        const isColliding = (
-            player.x < right &&
-            player.x + player.width > left &&
-            player.y < bottom &&
-            player.y + player.height > top
-        );
-
-        if (!isColliding) return false;
-
-        // Check if player is above the barrel (can land on it)
-        const isAboveBarrel = player.y + player.height <= top + 5;
-
-        // Check if player is moving downward
-        const isMovingDown = player.velocityY > 0;
-
-        // Only allow landing if player is above and moving down
-        if (isAboveBarrel && isMovingDown) {
-            player.y = top - player.height;
-            player.velocityY = 0;
-            player.isJumping = false;
-            return true;
-        }
-
-        // Handle side collisions
-        if (!isAboveBarrel) {
-            if (player.x + player.width - left < right - player.x) {
-                player.x = left - player.width;
-            } else {
-                player.x = right;
-            }
-            return true;
-        }
-
-        return false;
-    }
-
-    // Method to render the barrel (compatible with existing game loop)
-    render() {
-        this.draw(this.game.ctx);
-    }
-}
-
 class Level {
     constructor(game) {
         this.game = game;
         this.platforms = [];
         this.ladders = [];
         this.barrels = [];
-        this.immovableBarrels = []; // Add array for immovable barrels
         this.donkeyKong = null;
         this.debug = true;
         this.createLevel();
@@ -363,7 +208,7 @@ class Level {
      // Platform 5 (leftY +70, rightY +110)
      { x: 0, leftY: 530, rightY: 550, width: 500 },
      // Platform 6 (leftY +110, rightY +70)
-     { x: 80, leftY: 640, rightY: 620, width: 550 },
+     { x: 80, leftY: 660, rightY: 620, width: 550 },
           
     ];
 
@@ -420,9 +265,6 @@ class Level {
         this.donkeyKong = new DonkeyKong(this.game);
         this.donkeyKong.x = 50;
         this.donkeyKong.y = 100;
-
-        // Create the single immovable barrel on the floor
-        this.createImmovableBarrels();
     }
 
     createLadders() {
@@ -486,15 +328,6 @@ class Level {
                 console.warn("Skipping ladder - height too small:", ladderHeight);
             }
         });
-    }
-
-    createImmovableBarrels() {
-        // Clear existing immovable barrels
-        this.immovableBarrels = [];
-
-        // Create a single barrel at the specified position
-        const barrel = new ImmovableBarrel(this.game, 0, 700);
-        this.immovableBarrels.push(barrel);
     }
 
     renderPlatformGuides() {
@@ -570,11 +403,6 @@ class Level {
         for (const barrel of this.barrels) {
             barrel.render();
         }
-
-        // Render immovable barrels
-        for (const barrel of this.immovableBarrels) {
-            barrel.render();
-        }
     }
 
     renderCoordinateSystem() {
@@ -632,74 +460,14 @@ class Level {
         let onPlatform = false;
         for (const platform of this.platforms) {
             if (platform.checkCollision(player)) {
-                const surfaceY = platform.getSurfaceY(player.x + player.width/2);
-                
-                // If player is above the platform, land on it
-                if (player.y + player.height <= surfaceY + 5) {
-                    player.y = surfaceY - player.height;
-                    player.velocityY = 0;
-                    player.isJumping = false;
-                    onPlatform = true;
-                } else {
-                    // If hitting the side of the platform, prevent horizontal movement
-                    const dx = player.x - platform.x;
-                    const dy = player.y - platform.y;
-                    const rotatedX = dx * Math.cos(-platform.angle) - dy * Math.sin(-platform.angle);
-                    
-                    if (rotatedX < 5) {
-                        player.x = platform.x - player.width;
-                    } else if (rotatedX + player.width > platform.width - 5) {
-                        player.x = platform.x + platform.width;
-                    }
-                }
+                onPlatform = true;
+                break;
             }
         }
 
-        // Apply gravity if not on platform
-        if (!onPlatform) {
+        // If not on a platform and not climbing, apply gravity
+        if (!onPlatform && !player.isClimbing) {
             player.velocityY += player.gravity;
-        }
-
-        // Check collisions with immovable barrels
-        for (const barrel of this.immovableBarrels) {
-            if (barrel.checkCollision(player)) {
-                // Calculate collision sides
-                const playerBottom = player.y + player.height;
-                const playerRight = player.x + player.width;
-                const barrelBottom = barrel.y + barrel.height;
-                const barrelRight = barrel.x + barrel.radius * 2;
-
-                // Check which side the collision is happening
-                const bottomCollision = playerBottom - barrel.y;
-                const topCollision = barrelBottom - player.y;
-                const leftCollision = playerRight - barrel.x;
-                const rightCollision = barrelRight - player.x;
-
-                // Find the minimum penetration
-                const minX = Math.min(leftCollision, rightCollision);
-                const minY = Math.min(topCollision, bottomCollision);
-
-                // Resolve collision based on the minimum penetration
-                if (minX < minY) {
-                    // Horizontal collision
-                    if (leftCollision < rightCollision) {
-                        player.x = barrel.x - player.width;
-                    } else {
-                        player.x = barrelRight;
-                    }
-                } else {
-                    // Vertical collision
-                    if (topCollision < bottomCollision) {
-                        player.y = barrelBottom;
-                        player.velocityY = 0;
-                    } else {
-                        player.y = barrel.y - player.height;
-                        player.velocityY = 0;
-                        player.isJumping = false;
-                        onPlatform = true; // Set onPlatform when landing on barrel
-                    }
-                }
-            }
         }
     }
 } 
