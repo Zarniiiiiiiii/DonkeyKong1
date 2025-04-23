@@ -200,11 +200,11 @@ class Level {
      // Platform 1 (base)
      { x: 0, leftY: 170, rightY: 190, width: 500 },
      // Platform 2 (leftY +110, rightY +70)
-     { x: 50, leftY: 280, rightY: 260, width: 550 },
+     { x: 80, leftY: 280, rightY: 260, width: 550 },
      // Platform 3 (leftY +70, rightY +110)
      { x: 0, leftY: 350, rightY: 370, width: 500 },
      // Platform 4 (leftY +110, rightY +70)
-     { x: 50, leftY: 460, rightY: 440, width: 550 },
+     { x: 80, leftY: 460, rightY: 440, width: 550 },
      // Platform 5 (leftY +70, rightY +110)
      { x: 0, leftY: 530, rightY: 550, width: 500 },
      // Platform 6 (leftY +110, rightY +70)

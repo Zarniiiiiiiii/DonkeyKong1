@@ -10,14 +10,14 @@ class Player {
         this.isJumping = false;
         this.isClimbing = false;
         this.direction = 'right';
+        this.spaceKeyPressed = false; // Track if space was just pressed
         
         // Input handling
         this.keys = {
             left: false,
             right: false,
             up: false,
-            down: false,
-            jump: false
+            down: false
         };
         
         this.setupInput();
@@ -27,12 +27,13 @@ class Player {
         this.x = 100;
         this.y = 700;
         this.speed = 3;
-        this.jumpForce = -12.5;
+        this.jumpForce = -13.2;
         this.gravity = 0.5;
         this.velocityY = 0;
         this.state = 'idle';
         this.isJumping = false;
         this.isClimbing = false;
+        this.spaceKeyPressed = false;
     }
     
     setupInput() {
@@ -53,7 +54,12 @@ class Player {
                     this.keys.down = true;
                     break;
                 case ' ':
-                    this.keys.jump = true;
+                    if (!this.spaceKeyPressed && !this.isJumping && !this.isClimbing) {
+                        this.velocityY = this.jumpForce;
+                        this.isJumping = true;
+                        this.state = 'jumping';
+                        this.spaceKeyPressed = true;
+                    }
                     break;
             }
         });
@@ -73,7 +79,7 @@ class Player {
                     this.keys.down = false;
                     break;
                 case ' ':
-                    this.keys.jump = false;
+                    this.spaceKeyPressed = false;
                     break;
             }
         });
@@ -89,13 +95,6 @@ class Player {
             this.state = 'running';
         } else {
             this.state = 'idle';
-        }
-        
-        // Handle jumping (only if not climbing)
-        if (this.keys.jump && !this.isJumping && !this.isClimbing) {
-            this.velocityY = this.jumpForce;
-            this.isJumping = true;
-            this.state = 'jumping';
         }
         
         // Handle ladder climbing
