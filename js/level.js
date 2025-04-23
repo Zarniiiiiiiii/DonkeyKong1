@@ -176,17 +176,18 @@ class Level {
         // Platform parameters with left and right y-coordinates
         const platformParams = [
             // 1
-            { x: 0, leftY: 60, rightY: 80, width: 550 },
-            // 2
-            { x: 50, leftY: 150, rightY: 130, width: 550 },
-            // 3
-            { x: 0, leftY: 200, rightY: 220, width: 550 },
-            // 4
-            { x: 50, leftY: 290, rightY: 270, width: 550 },
-            // 5
-            { x: 0, leftY: 340, rightY: 360, width: 550 },
-            // 6
-            { x: 50, leftY: 430, rightY: 410, width: 550 },
+            // Platform 1 (new base: leftY=250)
+    { x: 0, leftY: 250, rightY: 270, width: 550 },
+    // Platform 2 (leftY diff: +100, rightY diff: +60)
+    { x: 50, leftY: 350, rightY: 330, width: 550 },
+    // Platform 3 (leftY diff: +60, rightY diff: +100)
+    { x: 0, leftY: 410, rightY: 430, width: 550 },
+    // Platform 4 (leftY diff: +100, rightY diff: +60)
+    { x: 50, leftY: 510, rightY: 490, width: 550 },
+    // Platform 5 (leftY diff: +60, rightY diff: +100)
+    { x: 0, leftY: 570, rightY: 590, width: 550 },
+    // Platform 6 (leftY diff: +100, rightY diff: +60)
+    { x: 50, leftY: 670, rightY: 650, width: 550 },
             // 7
             //{ x: 100, leftY: 460, rightY: 470, width: 500 }
         ];
