@@ -294,12 +294,41 @@ class ImmovableBarrel {
         const top = this.y;
         const bottom = this.y + this.height;
 
-        return (
+        // Check if player is within the barrel's bounds
+        const isColliding = (
             player.x < right &&
             player.x + player.width > left &&
             player.y < bottom &&
             player.y + player.height > top
         );
+
+        if (!isColliding) return false;
+
+        // Check if player is above the barrel (can land on it)
+        const isAboveBarrel = player.y + player.height <= top + 5;
+
+        // Check if player is moving downward
+        const isMovingDown = player.velocityY > 0;
+
+        // Only allow landing if player is above and moving down
+        if (isAboveBarrel && isMovingDown) {
+            player.y = top - player.height;
+            player.velocityY = 0;
+            player.isJumping = false;
+            return true;
+        }
+
+        // Handle side collisions
+        if (!isAboveBarrel) {
+            if (player.x + player.width - left < right - player.x) {
+                player.x = left - player.width;
+            } else {
+                player.x = right;
+            }
+            return true;
+        }
+
+        return false;
     }
 
     // Method to render the barrel (compatible with existing game loop)
@@ -667,6 +696,7 @@ class Level {
                         player.y = barrel.y - player.height;
                         player.velocityY = 0;
                         player.isJumping = false;
+                        onPlatform = true; // Set onPlatform when landing on barrel
                     }
                 }
             }

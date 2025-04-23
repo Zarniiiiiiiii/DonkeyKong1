@@ -10,6 +10,7 @@ class Player {
         this.isJumping = false;
         this.isClimbing = false;
         this.direction = 'right';
+        this.canJump = true; // New flag to control jump availability
         
         // Input handling
         this.keys = {
@@ -27,7 +28,7 @@ class Player {
         this.x = 100;
         this.y = 700;
         this.speed = 3;
-        this.jumpForce = -12;
+        this.jumpForce = -15;
         this.gravity = 0.5;
         this.velocityY = 0;
         this.state = 'idle';
@@ -53,7 +54,13 @@ class Player {
                     this.keys.down = true;
                     break;
                 case ' ':
-                    this.keys.jump = true;
+                    if (this.canJump && !this.isJumping && !this.isClimbing) {
+                        this.keys.jump = true;
+                        this.canJump = false; // Prevent continuous jumping
+                        this.velocityY = this.jumpForce;
+                        this.isJumping = true;
+                        this.state = 'jumping';
+                    }
                     break;
             }
         });
@@ -74,6 +81,7 @@ class Player {
                     break;
                 case ' ':
                     this.keys.jump = false;
+                    this.canJump = true; // Allow jumping again when space is released
                     break;
             }
         });
@@ -89,13 +97,6 @@ class Player {
             this.state = 'running';
         } else {
             this.state = 'idle';
-        }
-        
-        // Handle jumping (only if not climbing)
-        if (this.keys.jump && !this.isJumping && !this.isClimbing) {
-            this.velocityY = this.jumpForce;
-            this.isJumping = true;
-            this.state = 'jumping';
         }
         
         // Handle ladder climbing
