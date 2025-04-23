@@ -176,17 +176,17 @@ class Level {
         // Platform parameters with left and right y-coordinates
         const platformParams = [
             // 1
-            { x: 100, leftY: 40, rightY: 60, width: 500 },
+            { x: 0, leftY: 60, rightY: 80, width: 550 },
             // 2
-            { x: 150, leftY: 130, rightY: 110, width: 500 },
+            { x: 50, leftY: 150, rightY: 130, width: 550 },
             // 3
-            { x: 100, leftY: 180, rightY: 200, width: 500 },
+            { x: 0, leftY: 200, rightY: 220, width: 550 },
             // 4
-            { x: 150, leftY: 270, rightY: 250, width: 500 },
+            { x: 50, leftY: 290, rightY: 270, width: 550 },
             // 5
-            { x: 100, leftY: 320, rightY: 340, width: 500 },
+            { x: 0, leftY: 340, rightY: 360, width: 550 },
             // 6
-            { x: 150, leftY: 410, rightY: 390, width: 500 },
+            { x: 50, leftY: 430, rightY: 410, width: 550 },
             // 7
             //{ x: 100, leftY: 460, rightY: 470, width: 500 }
         ];
@@ -214,8 +214,8 @@ class Level {
                     this.platforms.push(platform);
                     success = true;
                     break;
-                }
-                
+            }
+            
                 attempts++;
             } while (attempts < maxAttempts);
 
@@ -234,7 +234,7 @@ class Level {
         });
 
         // Only create ladders if we have at least 2 platforms
-        if (this.platforms.length >= 2) {
+        if (this.platforms.length >= 99999) {
             this.createLadders();
         } else {
             console.error("Not enough platforms to create ladders");

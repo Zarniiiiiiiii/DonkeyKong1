@@ -4,8 +4,8 @@ class Game {
         this.ctx = this.canvas.getContext('2d');
         
         // Set canvas size
-        this.canvas.width = 800;
-        this.canvas.height = 600;
+        this.canvas.width = 600;
+        this.canvas.height = 800;
         
         // Game state
         this.gameState = 'running'; // running, paused, gameOver
@@ -43,7 +43,7 @@ class Game {
         
         // Draw ground
         this.ctx.fillStyle = '#333';
-        this.ctx.fillRect(0, 532, this.canvas.width, 68);
+        this.ctx.fillRect(0, 732, this.canvas.width, 68);
         
         // Render level (platforms and ladders)
         this.level.render();

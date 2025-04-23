@@ -6,7 +6,7 @@ class DonkeyKong {
         this.x = 50;
         this.y = 100;
         this.throwTimer = 0;
-        this.throwInterval = 2000; // Throw a barrel every 2 seconds
+        this.throwInterval = 10000000; // Throw a barrel every 2 seconds
         this.animationFrame = 0;
         this.animationSpeed = 0.1;
     }
@@ -61,9 +61,9 @@ class Barrel {
         this.speed = 2;
         this.direction = 1; // 1 for right, -1 for left
         this.velocityY = 0;
-        this.gravity = 0.5;
+        this.gravity = 1.5;
         this.rotation = 0;
-        this.rotationSpeed = 0.2;
+        this.rotationSpeed = 0.1;
         this.bounceCount = 0;
         this.maxBounces = 3;
         this.onPlatform = false;

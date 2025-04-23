@@ -25,7 +25,7 @@ class Player {
 
     reset() {
         this.x = 100;
-        this.y = 500;
+        this.y = 700;
         this.speed = 3;
         this.jumpForce = -12;
         this.gravity = 0.5;
@@ -114,8 +114,8 @@ class Player {
         this.y += this.velocityY;
         
         // Simple ground collision
-        if (this.y > 500) {
-            this.y = 500;
+        if (this.y > 700) {
+            this.y = 700;
             this.velocityY = 0;
             this.isJumping = false;
         }
