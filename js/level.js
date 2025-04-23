@@ -110,13 +110,30 @@ class Platform {
         const rotatedX = dx * Math.cos(-this.angle) - dy * Math.sin(-this.angle);
         const rotatedY = dx * Math.sin(-this.angle) + dy * Math.cos(-this.angle);
         
-        return (
+        // Check if player is within platform bounds
+        const isWithinBounds = (
             rotatedX < this.width &&
             rotatedX + player.width > 0 &&
             rotatedY + player.height > 0 &&
-            rotatedY < this.height &&
-            player.velocityY > 0 // Only collide when falling
+            rotatedY < this.height
         );
+
+        if (!isWithinBounds) return false;
+
+        // Calculate the surface Y position at the player's X
+        const surfaceY = this.getSurfaceY(player.x + player.width/2);
+        
+        // Check if player is above the platform
+        const isAbovePlatform = player.y + player.height <= surfaceY + 5;
+        
+        // Check if player is moving downward
+        const isMovingDown = player.velocityY > 0;
+
+        // Only allow collision if:
+        // 1. Player is above the platform AND moving downward, OR
+        // 2. Player is hitting the side of the platform
+        return (isAbovePlatform && isMovingDown) || 
+               (!isAbovePlatform && Math.abs(rotatedX) < 5 || Math.abs(rotatedX + player.width - this.width) < 5);
     }
 }
 
@@ -586,11 +603,26 @@ class Level {
         let onPlatform = false;
         for (const platform of this.platforms) {
             if (platform.checkCollision(player)) {
-                const surfaceY = platform.getSurfaceY(player.x);
-                player.y = surfaceY - player.height;
-                player.velocityY = 0;
-                player.isJumping = false;
-                onPlatform = true;
+                const surfaceY = platform.getSurfaceY(player.x + player.width/2);
+                
+                // If player is above the platform, land on it
+                if (player.y + player.height <= surfaceY + 5) {
+                    player.y = surfaceY - player.height;
+                    player.velocityY = 0;
+                    player.isJumping = false;
+                    onPlatform = true;
+                } else {
+                    // If hitting the side of the platform, prevent horizontal movement
+                    const dx = player.x - platform.x;
+                    const dy = player.y - platform.y;
+                    const rotatedX = dx * Math.cos(-platform.angle) - dy * Math.sin(-platform.angle);
+                    
+                    if (rotatedX < 5) {
+                        player.x = platform.x - player.width;
+                    } else if (rotatedX + player.width > platform.width - 5) {
+                        player.x = platform.x + platform.width;
+                    }
+                }
             }
         }
 
