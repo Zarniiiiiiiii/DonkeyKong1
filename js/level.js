@@ -1,25 +1,106 @@
 class Platform {
-    constructor(game, x, y, width, angle = 0) {
+    constructor(game, x, leftY, rightY, width) {
         this.game = game;
         this.x = x;
-        this.y = y;
+        this.leftY = leftY;
+        this.rightY = rightY;
         this.width = width;
-        this.height = 16;
-        this.angle = angle;
+        this.height = 8; // Standard platform height
+        
+        // Calculate angle based on left and right y-coordinates
+        const rise = rightY - leftY;
+        this.angle = Math.atan2(rise, width);
+        
+        this.rivetSpacing = 16; // NES sprite rivet spacing
+        
+        // Calculate end points
+        this.endX = x + width;
+        this.y = leftY; // Use leftY as the starting y-coordinate
+        
+        // Calculate axis-aligned bounding box (AABB)
+        this.left = Math.min(x, this.endX) - 5; // Add small buffer
+        this.right = Math.max(x, this.endX) + 5;
+        this.top = Math.min(leftY, rightY) - 5;
+        this.bottom = Math.max(leftY, rightY) + 5;
     }
 
-    render() {
+    // Improved collision detection
+    collidesWith(other) {
+        // Fast AABB check first
+        if (this.right < other.left || 
+            this.left > other.right || 
+            this.bottom < other.top || 
+            this.top > other.bottom) {
+            return false;
+        }
+        
+        // Precise line intersection check
+        return this.linesIntersect(
+            this.x, this.y, this.endX, this.endY,
+            other.x, other.y, other.endX, other.endY
+        );
+    }
+
+    linesIntersect(x1, y1, x2, y2, x3, y3, x4, y4) {
+        // Line intersection math
+        const denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
+        if (denom === 0) return false; // Parallel lines
+        
+        const ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denom;
+        const ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denom;
+        
+        return ua >= 0 && ua <= 1 && ub >= 0 && ub <= 1;
+    }
+
+    isValidPlacement(existingPlatforms) {
+        return existingPlatforms.every(platform => !this.collidesWith(platform));
+    }
+
+    render(debug = false) {
         this.game.ctx.save();
         
         // Move to the platform's position
         this.game.ctx.translate(this.x, this.y);
         this.game.ctx.rotate(this.angle);
         
-        // Draw the platform
-        this.game.ctx.fillStyle = '#8B4513'; // Brown color for platforms
+        // Draw the platform base (steel gray)
+        this.game.ctx.fillStyle = '#C0C0C0';
         this.game.ctx.fillRect(0, 0, this.width, this.height);
         
+        // Draw rivets
+        this.game.ctx.fillStyle = '#808080';
+        for (let i = 0; i < this.width; i += this.rivetSpacing) {
+            this.game.ctx.beginPath();
+            this.game.ctx.arc(i, this.height/2, 2, 0, Math.PI * 2);
+            this.game.ctx.fill();
+        }
+
+        // Draw debug visualization if enabled
+        if (debug) {
+            this.game.ctx.restore();
+            this.game.ctx.save();
+            
+            // Draw platform endpoints
+            this.game.ctx.fillStyle = 'red';
+            this.game.ctx.beginPath();
+            this.game.ctx.arc(this.x, this.y, 4, 0, Math.PI * 2);
+            this.game.ctx.arc(this.endX, this.endY, 4, 0, Math.PI * 2);
+            this.game.ctx.fill();
+
+            // Draw AABB
+            this.game.ctx.strokeStyle = 'rgba(0, 255, 0, 0.3)';
+            this.game.ctx.strokeRect(
+                this.left, this.top,
+                this.right - this.left, this.bottom - this.top
+            );
+        }
+        
         this.game.ctx.restore();
+    }
+
+    // Gets platform surface coordinates for collision
+    getSurfaceY(xPos) {
+        return this.y + Math.tan(this.angle) * (xPos - this.x);
     }
 
     checkCollision(player) {
@@ -39,57 +120,124 @@ class Platform {
     }
 }
 
+class Ladder {
+    constructor(game, x, y, height) {
+        this.game = game;
+        this.x = x;
+        this.y = y;
+        this.width = 16;
+        this.height = height;
+        this.rungSpacing = 12;
+    }
+
+    render() {
+        this.game.ctx.save();
+        
+        // Draw ladder sides
+        this.game.ctx.strokeStyle = '#8B4513';
+        this.game.ctx.lineWidth = 2;
+        
+        // Left side
+        this.game.ctx.beginPath();
+        this.game.ctx.moveTo(this.x, this.y);
+        this.game.ctx.lineTo(this.x, this.y + this.height);
+        this.game.ctx.stroke();
+        
+        // Right side
+        this.game.ctx.beginPath();
+        this.game.ctx.moveTo(this.x + this.width, this.y);
+        this.game.ctx.lineTo(this.x + this.width, this.y + this.height);
+        this.game.ctx.stroke();
+        
+        // Draw rungs
+        for (let y = 0; y < this.height; y += this.rungSpacing) {
+            this.game.ctx.beginPath();
+            this.game.ctx.moveTo(this.x, this.y + y);
+            this.game.ctx.lineTo(this.x + this.width, this.y + y);
+            this.game.ctx.stroke();
+        }
+        
+        this.game.ctx.restore();
+    }
+}
+
 class Level {
     constructor(game) {
         this.game = game;
         this.platforms = [];
+        this.ladders = [];
         this.barrels = [];
         this.donkeyKong = null;
+        this.debug = true;
         this.createLevel();
     }
 
     createLevel() {
-        // Create platforms in a vertical layout with inclines
-        const platformWidth = 520;
-        const platformHeight = 16;
-        const platformOffset = 100;
-        const canvasWidth = this.game.canvas.width;
-        const baseY = 600;
-        const minVerticalGap = 80;
+        // Platform parameters with left and right y-coordinates
+        const platformParams = [
+            // 1
+            { x: 100, leftY: 40, rightY: 60, width: 500 },
+            // 2
+            { x: 150, leftY: 130, rightY: 110, width: 500 },
+            // 3
+            { x: 100, leftY: 180, rightY: 200, width: 500 },
+            // 4
+            { x: 150, leftY: 270, rightY: 250, width: 500 },
+            // 5
+            { x: 100, leftY: 320, rightY: 340, width: 500 },
+            // 6
+            { x: 150, leftY: 410, rightY: 390, width: 500 },
+            // 7
+            //{ x: 100, leftY: 460, rightY: 470, width: 500 }
+        ];
 
-        // Create alternating inclined platforms with custom spacing
-        for (let i = 0; i < 4; i++) {
-            const angle = i % 2 === 0 ? Math.PI / 24 : -Math.PI / 24;
-            const x = i % 2 === 0 ? platformOffset : canvasWidth - platformOffset - platformWidth;
+        // Clear existing platforms
+        this.platforms = [];
+
+        // Create platforms with validation
+        platformParams.forEach(params => {
+            let platform;
+            let attempts = 0;
+            const maxAttempts = 5;
+            let success = false;
             
-            // Calculate the maximum height difference caused by the incline
-            const maxHeightDiff = Math.abs(Math.sin(angle) * platformWidth);
-            
-            // Custom spacing for each platform
-            let spacing;
-            switch(i) {
-                case 0: // Platform 1 - keep as is
-                    spacing = maxHeightDiff + minVerticalGap + 20;
+            do {
+                platform = new Platform(
+                    this.game,
+                    params.x,
+                    params.leftY + (attempts * 30),
+                    params.rightY + (attempts * 30),
+                    params.width
+                );
+                
+                if (platform.isValidPlacement(this.platforms)) {
+                    this.platforms.push(platform);
+                    success = true;
                     break;
-                case 1: // Platform 2 - closer to platform 1
-                    spacing = maxHeightDiff + minVerticalGap + 20 + 30; // Reduced from 50 to 30
-                    break;
-                case 2: // Platform 3 - closer to platform 2
-                    spacing = maxHeightDiff + minVerticalGap + 20 + 20; // Reduced from 20 to 20
-                    break;
-                case 3: // Platform 4 - closer to platform 3
-                    spacing = maxHeightDiff + minVerticalGap + 20 + 30; // Reduced from 60 to 30
-                    break;
+                }
+                
+                attempts++;
+            } while (attempts < maxAttempts);
+
+            if (!success) {
+                console.warn("Failed to place platform after", maxAttempts, "attempts. Using fallback position.");
+                // Use a fallback position with more spacing
+                platform = new Platform(
+                    this.game,
+                    params.x,
+                    params.leftY + 150,
+                    params.rightY + 150,
+                    params.width
+                );
+                this.platforms.push(platform);
             }
-            
-            // Calculate y position with custom spacing
-            const y = baseY - (i + 1) * spacing;
-            
-            // Create the platform
-            const platform = new Platform(this.game, x, y, platformWidth, angle);
-            
-            // Add the platform
-            this.platforms.push(platform);
+        });
+
+        // Only create ladders if we have at least 2 platforms
+        if (this.platforms.length >= 2) {
+            this.createLadders();
+        } else {
+            console.error("Not enough platforms to create ladders");
         }
 
         // Create Donkey Kong at the top left
@@ -98,124 +246,142 @@ class Level {
         this.donkeyKong.y = 100;
     }
 
-    // Helper method to check if two platforms intersect
-    checkPlatformIntersection(platform1, platform2) {
-        // Get the corners of both platforms
-        const corners1 = this.getPlatformCorners(platform1);
-        const corners2 = this.getPlatformCorners(platform2);
+    createLadders() {
+        // Clear existing ladders
+        this.ladders = [];
         
-        // Check if any corner of platform1 is inside platform2's bounds
-        for (const corner of corners1) {
-            if (this.isPointInPlatform(corner, platform2)) {
-                return true;
+        // Define ladder connection points (relative to platform ends)
+        const ladderConnections = [
+            // Top to middle-right
+            { 
+                topPlatform: 0, 
+                bottomPlatform: 1,
+                topOffset: 0.95,
+                bottomOffset: 0.05
+            },
+            // Middle-right to lower-left
+            { 
+                topPlatform: 1, 
+                bottomPlatform: 2,
+                topOffset: 0.05,
+                bottomOffset: 0.95
+            },
+            // Lower-left to bottom-right
+            { 
+                topPlatform: 2, 
+                bottomPlatform: 3,
+                topOffset: 0.95,
+                bottomOffset: 0.05
             }
-        }
-        
-        // Check if any corner of platform2 is inside platform1's bounds
-        for (const corner of corners2) {
-            if (this.isPointInPlatform(corner, platform1)) {
-                return true;
+        ];
+
+        ladderConnections.forEach(conn => {
+            // Skip if either platform is undefined
+            if (!this.platforms[conn.topPlatform] || !this.platforms[conn.bottomPlatform]) {
+                console.warn("Skipping ladder creation - missing platform");
+                return;
             }
-        }
-        
-        return false;
-    }
 
-    // Helper method to get platform corners
-    getPlatformCorners(platform) {
-        const corners = [];
-        const cos = Math.cos(platform.angle);
-        const sin = Math.sin(platform.angle);
-        
-        // Calculate all four corners
-        corners.push({
-            x: platform.x,
-            y: platform.y
-        });
-        
-        corners.push({
-            x: platform.x + platform.width * cos,
-            y: platform.y + platform.width * sin
-        });
-        
-        corners.push({
-            x: platform.x + platform.width * cos - platform.height * sin,
-            y: platform.y + platform.width * sin + platform.height * cos
-        });
-        
-        corners.push({
-            x: platform.x - platform.height * sin,
-            y: platform.y + platform.height * cos
-        });
-        
-        return corners;
-    }
-
-    // Helper method to check if a point is inside a platform
-    isPointInPlatform(point, platform) {
-        const dx = point.x - platform.x;
-        const dy = point.y - platform.y;
-        const rotatedX = dx * Math.cos(-platform.angle) - dy * Math.sin(-platform.angle);
-        const rotatedY = dx * Math.sin(-platform.angle) + dy * Math.cos(-platform.angle);
-        
-        return (
-            rotatedX >= 0 &&
-            rotatedX <= platform.width &&
-            rotatedY >= 0 &&
-            rotatedY <= platform.height
-        );
-    }
-
-    update(player, deltaTime) {
-        // Update Donkey Kong
-        if (this.donkeyKong) {
-            this.donkeyKong.update(deltaTime);
-        }
-
-        // Temporarily stop barrel updates
-        // for (let i = this.barrels.length - 1; i >= 0; i--) {
-        //     const barrel = this.barrels[i];
-        //     barrel.update();
-
-        //     // Check player collision with barrels
-        //     if (barrel.checkPlayerCollision(player)) {
-        //         // Handle player death
-        //         player.reset();
-        //     }
-        // }
-
-        // Check platform collisions
-        let onPlatform = false;
-        for (const platform of this.platforms) {
-            if (platform.checkCollision(player)) {
-                // Calculate the exact y position on the inclined platform
-                const dx = player.x - platform.x;
-                const rotatedY = dx * Math.sin(platform.angle);
-                player.y = platform.y - player.height + rotatedY;
-                player.velocityY = 0;
-                player.isJumping = false;
-                onPlatform = true;
+            const top = this.platforms[conn.topPlatform];
+            const bottom = this.platforms[conn.bottomPlatform];
+            
+            // Calculate connection points
+            const topConnectX = top.x + (top.width * conn.topOffset * Math.cos(top.angle));
+            const topConnectY = top.y + (top.width * conn.topOffset * Math.sin(top.angle));
+            
+            const bottomConnectX = bottom.x + (bottom.width * conn.bottomOffset * Math.cos(bottom.angle));
+            const bottomConnectY = bottom.y + (bottom.width * conn.bottomOffset * Math.sin(bottom.angle));
+            
+            // Place ladder at midpoint
+            const ladderX = (topConnectX + bottomConnectX) / 2 - 8;
+            const ladderHeight = bottomConnectY - topConnectY;
+            
+            if (ladderHeight > 20) { // Minimum ladder height
+                this.ladders.push(new Ladder(
+                    this.game,
+                    ladderX,
+                    topConnectY,
+                    ladderHeight
+                ));
+            } else {
+                console.warn("Skipping ladder - height too small:", ladderHeight);
             }
-        }
-
-        // Apply gravity if not on platform
-        if (!onPlatform) {
-            player.velocityY += player.gravity;
-        }
+        });
     }
 
-    renderPlatformNumber(platform, number) {
+    renderPlatformGuides() {
         this.game.ctx.save();
-        this.game.ctx.font = '24px Arial';
-        this.game.ctx.fillStyle = 'white';
-        this.game.ctx.textAlign = 'center';
+        this.game.ctx.strokeStyle = 'rgba(255, 0, 255, 0.5)';
+        this.game.ctx.lineWidth = 2;
         
-        // Calculate the center position of the platform
-        const centerX = platform.x + platform.width / 2;
-        const centerY = platform.y - 20; // Position above the platform
+        // Draw vertical alignment guides
+        const leftGuideX = 100;
+        const rightGuideX = 400;
         
-        this.game.ctx.fillText(number.toString(), centerX, centerY);
+        this.game.ctx.beginPath();
+        this.game.ctx.moveTo(leftGuideX, 0);
+        this.game.ctx.lineTo(leftGuideX, this.game.canvas.height);
+        this.game.ctx.moveTo(rightGuideX, 0);
+        this.game.ctx.lineTo(rightGuideX, this.game.canvas.height);
+        this.game.ctx.stroke();
+        
         this.game.ctx.restore();
+    }
+
+    renderPlatformConnections() {
+        this.game.ctx.save();
+        this.game.ctx.strokeStyle = 'rgba(0, 255, 255, 0.3)';
+        
+        for (let i = 0; i < this.platforms.length - 1; i++) {
+            const current = this.platforms[i];
+            const next = this.platforms[i + 1];
+            
+            this.game.ctx.beginPath();
+            this.game.ctx.moveTo(
+                current.x + current.width * Math.cos(current.angle),
+                current.y + current.width * Math.sin(current.angle)
+            );
+            this.game.ctx.lineTo(
+                next.x,
+                next.y
+            );
+            this.game.ctx.stroke();
+        }
+        
+        this.game.ctx.restore();
+    }
+
+    render() {
+        // Render debug guides
+        if (this.debug) {
+            this.renderPlatformGuides();
+            this.renderPlatformConnections();
+        }
+        
+        // Render coordinate system
+        this.renderCoordinateSystem();
+        
+        // Render all platforms
+        for (let i = 0; i < this.platforms.length; i++) {
+            const platform = this.platforms[i];
+            platform.render(this.debug);
+            this.renderPlatformNumber(platform, i + 1);
+        }
+
+        // Render ladders
+        for (const ladder of this.ladders) {
+            ladder.render();
+        }
+
+        // Render Donkey Kong
+        if (this.donkeyKong) {
+            this.donkeyKong.render();
+        }
+
+        // Render barrels
+        for (const barrel of this.barrels) {
+            barrel.render();
+        }
     }
 
     renderCoordinateSystem() {
@@ -232,25 +398,58 @@ class Level {
         this.game.ctx.restore();
     }
 
-    render() {
-        // Render coordinate system
-        this.renderCoordinateSystem();
+    renderPlatformNumber(platform, number) {
+        this.game.ctx.save();
+        this.game.ctx.font = '24px Arial';
+        this.game.ctx.fillStyle = 'white';
+        this.game.ctx.textAlign = 'center';
         
-        // Render all platforms
-        for (let i = 0; i < this.platforms.length; i++) {
-            const platform = this.platforms[i];
-            platform.render();
-            this.renderPlatformNumber(platform, i + 1);
+        // Calculate the center position of the platform
+        const centerX = platform.x + platform.width / 2;
+        const centerY = platform.y - 20; // Position above the platform
+        
+        this.game.ctx.fillText(number.toString(), centerX, centerY);
+        this.game.ctx.restore();
+    }
+
+    update(player, deltaTime) {
+        // Update Donkey Kong
+        if (this.donkeyKong) {
+            this.donkeyKong.update(deltaTime);
         }
 
-        // Temporarily hide Donkey Kong
-        // if (this.donkeyKong) {
-        //     this.donkeyKong.render();
-        // }
+        // Update barrels
+        for (let i = this.barrels.length - 1; i >= 0; i--) {
+            const barrel = this.barrels[i];
+            barrel.update();
 
-        // Temporarily stop barrel rendering
-        // for (const barrel of this.barrels) {
-        //     barrel.render();
-        // }
+            // Remove barrels that fall off screen
+            if (barrel.y > this.game.canvas.height) {
+                this.barrels.splice(i, 1);
+                continue;
+            }
+
+            // Check player collision with barrels
+            if (barrel.checkPlayerCollision(player)) {
+                player.reset();
+            }
+        }
+
+        // Check platform collisions
+        let onPlatform = false;
+        for (const platform of this.platforms) {
+            if (platform.checkCollision(player)) {
+                const surfaceY = platform.getSurfaceY(player.x);
+                player.y = surfaceY - player.height;
+                player.velocityY = 0;
+                player.isJumping = false;
+                onPlatform = true;
+            }
+        }
+
+        // Apply gravity if not on platform
+        if (!onPlatform) {
+            player.velocityY += player.gravity;
+        }
     }
 } 
