@@ -161,12 +161,143 @@ class Ladder {
     }
 }
 
+class ImmovableBarrel {
+    constructor(game, x, y) {
+        this.game = game;
+        this.x = x;
+        this.y = y;
+        this.radius = 20;      // Horizontal radius
+        this.height = 40;      // Vertical height
+        this.bandWidth = 4;    // Width of metal bands
+        this.bandSpacing = 10; // Distance from top/bottom for bands
+    }
+
+    draw(ctx) {
+        // Save context state
+        ctx.save();
+
+        // Draw barrel body (wooden part)
+        ctx.fillStyle = "#8B4513"; // Darker brown for better contrast
+        ctx.beginPath();
+        ctx.ellipse(
+            this.x + this.radius,
+            this.y + this.height / 2,
+            this.radius,
+            this.height / 2,
+            0,
+            0,
+            2 * Math.PI
+        );
+        ctx.fill();
+
+        // Draw barrel rim highlights (top and bottom ellipses)
+        ctx.fillStyle = "#A0522D"; // Lighter brown for rim
+        ctx.beginPath();
+        ctx.ellipse(
+            this.x + this.radius,
+            this.y + 5,
+            this.radius * 0.9,
+            8,
+            0,
+            0,
+            2 * Math.PI
+        );
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.ellipse(
+            this.x + this.radius,
+            this.y + this.height - 5,
+            this.radius * 0.9,
+            8,
+            0,
+            0,
+            2 * Math.PI
+        );
+        ctx.fill();
+
+        // Draw metal bands
+        ctx.strokeStyle = "#C0C0C0"; // Silver color for bands
+        ctx.lineWidth = this.bandWidth;
+
+        // Top band
+        ctx.beginPath();
+        ctx.ellipse(
+            this.x + this.radius,
+            this.y + this.bandSpacing,
+            this.radius,
+            5,
+            0,
+            0,
+            2 * Math.PI
+        );
+        ctx.stroke();
+
+        // Bottom band
+        ctx.beginPath();
+        ctx.ellipse(
+            this.x + this.radius,
+            this.y + this.height - this.bandSpacing,
+            this.radius,
+            5,
+            0,
+            0,
+            2 * Math.PI
+        );
+        ctx.stroke();
+
+        // Add wood grain detail
+        ctx.strokeStyle = "#6B3E26"; // Darker brown for wood grain
+        ctx.lineWidth = 1;
+        
+        // Draw a few curved lines for wood grain effect
+        for (let i = 1; i < 4; i++) {
+            ctx.beginPath();
+            ctx.ellipse(
+                this.x + this.radius,
+                this.y + (this.height * i / 4),
+                this.radius * 0.8,
+                4,
+                0,
+                0,
+                2 * Math.PI
+            );
+            ctx.stroke();
+        }
+
+        // Restore context state
+        ctx.restore();
+    }
+
+    // Method to check for collision with other game objects
+    checkCollision(player) {
+        // Calculate the bounding box of the barrel
+        const left = this.x;
+        const right = this.x + this.radius * 2;
+        const top = this.y;
+        const bottom = this.y + this.height;
+
+        return (
+            player.x < right &&
+            player.x + player.width > left &&
+            player.y < bottom &&
+            player.y + player.height > top
+        );
+    }
+
+    // Method to render the barrel (compatible with existing game loop)
+    render() {
+        this.draw(this.game.ctx);
+    }
+}
+
 class Level {
     constructor(game) {
         this.game = game;
         this.platforms = [];
         this.ladders = [];
         this.barrels = [];
+        this.immovableBarrels = []; // Add array for immovable barrels
         this.donkeyKong = null;
         this.debug = true;
         this.createLevel();
@@ -243,6 +374,9 @@ class Level {
         this.donkeyKong = new DonkeyKong(this.game);
         this.donkeyKong.x = 50;
         this.donkeyKong.y = 100;
+
+        // Create the single immovable barrel on the floor
+        this.createImmovableBarrels();
     }
 
     createLadders() {
@@ -306,6 +440,15 @@ class Level {
                 console.warn("Skipping ladder - height too small:", ladderHeight);
             }
         });
+    }
+
+    createImmovableBarrels() {
+        // Clear existing immovable barrels
+        this.immovableBarrels = [];
+
+        // Create a single barrel at the specified position
+        const barrel = new ImmovableBarrel(this.game, 0, 700);
+        this.immovableBarrels.push(barrel);
     }
 
     renderPlatformGuides() {
@@ -381,6 +524,11 @@ class Level {
         for (const barrel of this.barrels) {
             barrel.render();
         }
+
+        // Render immovable barrels
+        for (const barrel of this.immovableBarrels) {
+            barrel.render();
+        }
     }
 
     renderCoordinateSystem() {
@@ -449,6 +597,22 @@ class Level {
         // Apply gravity if not on platform
         if (!onPlatform) {
             player.velocityY += player.gravity;
+        }
+
+        // Check collisions with immovable barrels
+        for (const barrel of this.immovableBarrels) {
+            if (barrel.checkCollision(player)) {
+                // Check if player is above the barrel (can jump on it)
+                if (player.y + player.height <= barrel.y + 5) {
+                    player.y = barrel.y - player.height;
+                    player.velocityY = 0;
+                    player.isJumping = false;
+                } else {
+                    // If hitting from the sides or bottom, prevent movement
+                    player.x = player.prevX;
+                    player.y = player.prevY;
+                }
+            }
         }
     }
 } 
