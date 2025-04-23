@@ -602,15 +602,40 @@ class Level {
         // Check collisions with immovable barrels
         for (const barrel of this.immovableBarrels) {
             if (barrel.checkCollision(player)) {
-                // Check if player is above the barrel (can jump on it)
-                if (player.y + player.height <= barrel.y + 5) {
-                    player.y = barrel.y - player.height;
-                    player.velocityY = 0;
-                    player.isJumping = false;
+                // Calculate collision sides
+                const playerBottom = player.y + player.height;
+                const playerRight = player.x + player.width;
+                const barrelBottom = barrel.y + barrel.height;
+                const barrelRight = barrel.x + barrel.radius * 2;
+
+                // Check which side the collision is happening
+                const bottomCollision = playerBottom - barrel.y;
+                const topCollision = barrelBottom - player.y;
+                const leftCollision = playerRight - barrel.x;
+                const rightCollision = barrelRight - player.x;
+
+                // Find the minimum penetration
+                const minX = Math.min(leftCollision, rightCollision);
+                const minY = Math.min(topCollision, bottomCollision);
+
+                // Resolve collision based on the minimum penetration
+                if (minX < minY) {
+                    // Horizontal collision
+                    if (leftCollision < rightCollision) {
+                        player.x = barrel.x - player.width;
+                    } else {
+                        player.x = barrelRight;
+                    }
                 } else {
-                    // If hitting from the sides or bottom, prevent movement
-                    player.x = player.prevX;
-                    player.y = player.prevY;
+                    // Vertical collision
+                    if (topCollision < bottomCollision) {
+                        player.y = barrelBottom;
+                        player.velocityY = 0;
+                    } else {
+                        player.y = barrel.y - player.height;
+                        player.velocityY = 0;
+                        player.isJumping = false;
+                    }
                 }
             }
         }
