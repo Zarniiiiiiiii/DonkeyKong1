@@ -6,7 +6,7 @@ class DonkeyKong {
         this.x = 50;
         this.y = 50;
         this.throwTimer = 0;
-        this.throwInterval = 200000; // Initial interval, will be randomized
+        this.throwInterval = 2000; // 2 seconds initial interval
         this.animationFrame = 0;
         this.animationSpeed = 0.1;
     }
@@ -14,11 +14,13 @@ class DonkeyKong {
     update(deltaTime) {
         // Update throw timer
         this.throwTimer += deltaTime;
+        
+        // Throw barrel at regular intervals
         if (this.throwTimer >= this.throwInterval) {
             this.throwBarrel();
             this.throwTimer = 0;
-            // Set new random interval between 2 and 5 seconds
-            this.throwInterval = 2000 + Math.random() * 3000;
+            // Set new random interval between 2 and 4.5 seconds
+            this.throwInterval = 2000 + Math.random() * 2500;
         }
 
         // Update animation
@@ -70,9 +72,12 @@ class Barrel {
         this.maxBounces = 3;
         this.onPlatform = false;
         this.currentPlatform = null;
+        this.isActive = true; // New property to track if barrel is still in play
     }
 
     update() {
+        if (!this.isActive) return;
+
         // Apply gravity
         this.velocityY += this.gravity;
         this.y += this.velocityY;
@@ -119,8 +124,9 @@ class Barrel {
             this.direction = -1; // Change direction to left
         }
 
-        // Remove if out of bounds or after max bounces
-        if (this.y > this.game.canvas.height || this.bounceCount >= this.maxBounces) {
+        // Only remove barrel if it's completely off-screen and not on any platform
+        if (this.y > this.game.canvas.height + this.height) {
+            this.isActive = false;
             const index = this.game.level.barrels.indexOf(this);
             if (index !== -1) {
                 this.game.level.barrels.splice(index, 1);
