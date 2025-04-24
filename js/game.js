@@ -43,7 +43,7 @@ class Game {
         
         // Draw ground
         this.ctx.fillStyle = '#333';
-        this.ctx.fillRect(0, 732, this.canvas.width, 68);
+        this.ctx.fillRect(0, 722, this.canvas.width, 75);
         
         // Render level (platforms and ladders)
         this.level.render();

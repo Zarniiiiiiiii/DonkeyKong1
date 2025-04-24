@@ -6,7 +6,7 @@ class DonkeyKong {
         this.x = 50;
         this.y = 50;
         this.throwTimer = 0;
-        this.throwInterval = 2000; // Throw a barrel every 2 seconds
+        this.throwInterval = 2000; // Initial interval, will be randomized
         this.animationFrame = 0;
         this.animationSpeed = 0.1;
     }
@@ -17,6 +17,8 @@ class DonkeyKong {
         if (this.throwTimer >= this.throwInterval) {
             this.throwBarrel();
             this.throwTimer = 0;
+            // Set new random interval between 2 and 5 seconds
+            this.throwInterval = 2000 + Math.random() * 3000;
         }
 
         // Update animation
