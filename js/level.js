@@ -107,6 +107,11 @@ class Platform {
     }
 
     checkCollision(player) {
+        // Skip collision check if player is climbing
+        if (player.isClimbing) {
+            return false;
+        }
+
         // Check if player is within the platform's x-range
         if (player.x + player.width < this.x || player.x > this.endX) {
             return false;
@@ -272,8 +277,8 @@ class Level {
         this.ladders.push(new Ladder(
             this.game,
             150,  // x position
-            180,  // y position (top of ladder)
-            100   // height (distance between platforms)
+            175,  // y position (top of ladder)
+            110   // height (distance between platforms)
         ));
 
         // Ladder 2: Between platform 1 and 2 (right side)

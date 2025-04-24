@@ -85,7 +85,77 @@ class Player {
         });
     }
     
+    checkLadderCollision() {
+        for (const ladder of this.game.level.ladders) {
+            // Check if player is within the ladder's x-range (with some tolerance)
+            if (this.x + this.width > ladder.x - 10 && 
+                this.x < ladder.x + ladder.width + 10) {
+                
+                // Check if player is within the ladder's y-range (with some tolerance)
+                if (this.y + this.height > ladder.y - 10 && 
+                    this.y < ladder.y + ladder.height + 10) {
+                    
+                    // If player is pressing up or down, start climbing
+                    if (this.keys.up || this.keys.down) {
+                        // Only start climbing if we're actually on the ladder
+                        if (this.x + this.width > ladder.x && 
+                            this.x < ladder.x + ladder.width) {
+                            this.isClimbing = true;
+                            this.velocityY = 0;
+                            // Center player on ladder with a small offset
+                            this.x = ladder.x + (ladder.width - this.width) / 2;
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        this.isClimbing = false;
+        return false;
+    }
+    
     update() {
+        // Check for ladder collision first
+        const onLadder = this.checkLadderCollision();
+        
+        // Handle climbing movement
+        if (this.isClimbing) {
+            this.state = 'climbing';
+            const climbSpeed = 2; // Slower climbing speed
+            
+            // Find the current ladder
+            const currentLadder = this.game.level.ladders.find(ladder => 
+                this.x + this.width > ladder.x && 
+                this.x < ladder.x + ladder.width
+            );
+            
+            if (currentLadder) {
+                // Keep player centered on ladder
+                this.x = currentLadder.x + (currentLadder.width - this.width) / 2;
+                
+                // Handle climbing movement
+                if (this.keys.up) {
+                    this.y = Math.max(currentLadder.y, this.y - climbSpeed);
+                }
+                if (this.keys.down) {
+                    this.y = Math.min(
+                        currentLadder.y + currentLadder.height - this.height,
+                        this.y + climbSpeed
+                    );
+                }
+                
+                // Stop climbing if we reach the top or bottom
+                if (this.y <= currentLadder.y || 
+                    this.y + this.height >= currentLadder.y + currentLadder.height) {
+                    this.isClimbing = false;
+                }
+                
+                return; // Skip normal movement and gravity when climbing
+            } else {
+                this.isClimbing = false;
+            }
+        }
+        
         // Handle horizontal movement
         if (this.keys.left) {
             this.x -= this.speed;
@@ -97,20 +167,11 @@ class Player {
             this.state = 'idle';
         }
         
-        // Handle ladder climbing
-        if (this.isClimbing) {
-            this.state = 'climbing';
-            if (this.keys.up) {
-                this.y -= this.speed;
-            }
-            if (this.keys.down) {
-                this.y += this.speed;
-            }
+        // Apply gravity if not climbing
+        if (!onLadder) {
+            this.velocityY += this.gravity;
+            this.y += this.velocityY;
         }
-        
-        // Apply gravity
-        this.velocityY += this.gravity;
-        this.y += this.velocityY;
         
         // Simple ground collision
         if (this.y > 700) {
