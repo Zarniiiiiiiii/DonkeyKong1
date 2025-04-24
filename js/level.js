@@ -235,7 +235,7 @@ class Level {
                     this.platforms.push(platform);
                     success = true;
                     break;
-            }
+                }
             
                 attempts++;
             } while (attempts < maxAttempts);
@@ -254,12 +254,8 @@ class Level {
             }
         });
 
-        // Only create ladders if we have at least 2 platforms
-        if (this.platforms.length >= 99999) {
-            this.createLadders();
-        } else {
-            console.error("Not enough platforms to create ladders");
-        }
+        // Create ladders after platforms are created
+        this.createLadders();
 
         // Create Donkey Kong at the top left
         this.donkeyKong = new DonkeyKong(this.game);
@@ -271,63 +267,46 @@ class Level {
         // Clear existing ladders
         this.ladders = [];
         
-        // Define ladder connection points (relative to platform ends)
-        const ladderConnections = [
-            // Top to middle-right
-            { 
-                topPlatform: 0, 
-                bottomPlatform: 1,
-                topOffset: 0.95,
-                bottomOffset: 0.05
-            },
-            // Middle-right to lower-left
-            { 
-                topPlatform: 1, 
-                bottomPlatform: 2,
-                topOffset: 0.05,
-                bottomOffset: 0.95
-            },
-            // Lower-left to bottom-right
-            { 
-                topPlatform: 2, 
-                bottomPlatform: 3,
-                topOffset: 0.95,
-                bottomOffset: 0.05
-            }
-        ];
+        // Create ladders with fixed positions
+        // Ladder 1: Between platform 0 and 1 (left side)
+        this.ladders.push(new Ladder(
+            this.game,
+            150,  // x position
+            180,  // y position (top of ladder)
+            100   // height (distance between platforms)
+        ));
 
-        ladderConnections.forEach(conn => {
-            // Skip if either platform is undefined
-            if (!this.platforms[conn.topPlatform] || !this.platforms[conn.bottomPlatform]) {
-                console.warn("Skipping ladder creation - missing platform");
-                return;
-            }
+        // Ladder 2: Between platform 1 and 2 (right side)
+        this.ladders.push(new Ladder(
+            this.game,
+            400,  // x position
+            275,  // y position (top of ladder)
+            95    // height (distance between platforms)
+        ));
 
-            const top = this.platforms[conn.topPlatform];
-            const bottom = this.platforms[conn.bottomPlatform];
-            
-            // Calculate connection points
-            const topConnectX = top.x + (top.width * conn.topOffset * Math.cos(top.angle));
-            const topConnectY = top.y + (top.width * conn.topOffset * Math.sin(top.angle));
-            
-            const bottomConnectX = bottom.x + (bottom.width * conn.bottomOffset * Math.cos(bottom.angle));
-            const bottomConnectY = bottom.y + (bottom.width * conn.bottomOffset * Math.sin(bottom.angle));
-            
-            // Place ladder at midpoint
-            const ladderX = (topConnectX + bottomConnectX) / 2 - 8;
-            const ladderHeight = bottomConnectY - topConnectY;
-            
-            if (ladderHeight > 20) { // Minimum ladder height
-                this.ladders.push(new Ladder(
-                    this.game,
-                    ladderX,
-                    topConnectY,
-                    ladderHeight
-                ));
-            } else {
-                console.warn("Skipping ladder - height too small:", ladderHeight);
-            }
-        });
+        // Ladder 3: Between platform 2 and 3 (left side)
+        this.ladders.push(new Ladder(
+            this.game,
+            150,  // x position
+            358,  // y position (top of ladder)
+            105   // height (distance between platforms)
+        ));
+
+        // Ladder 4: Between platform 3 and 4 (right side)
+        this.ladders.push(new Ladder(
+            this.game,
+            400,  // x position
+            450,  // y position (top of ladder)
+            105    // height (distance between platforms)
+        ));
+
+        // Ladder 5: Between platform 4 and 5 (left side)
+        this.ladders.push(new Ladder(
+            this.game,
+            150,  // x position
+            540,  // y position (top of ladder)
+            120   // height (distance between platforms)
+        ));
     }
 
     renderPlatformGuides() {

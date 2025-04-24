@@ -6,7 +6,7 @@ class DonkeyKong {
         this.x = 50;
         this.y = 50;
         this.throwTimer = 0;
-        this.throwInterval = 2000; // Initial interval, will be randomized
+        this.throwInterval = 200000; // Initial interval, will be randomized
         this.animationFrame = 0;
         this.animationSpeed = 0.1;
     }
