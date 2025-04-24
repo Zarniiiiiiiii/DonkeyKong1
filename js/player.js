@@ -1,8 +1,8 @@
 class Player {
     constructor(game) {
         this.game = game;
-        this.width = 32;
-        this.height = 32;
+        this.width = 24;
+        this.height = 24;
         this.reset();
         
         // Player states
@@ -28,7 +28,7 @@ class Player {
         this.y = 700;
         this.speed = 3;
         this.jumpForce = -13.2;
-        this.gravity = 0.5;
+        this.gravity = 0.4;
         this.velocityY = 0;
         this.state = 'idle';
         this.isJumping = false;

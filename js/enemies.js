@@ -4,9 +4,9 @@ class DonkeyKong {
         this.width = 64;
         this.height = 64;
         this.x = 50;
-        this.y = 100;
+        this.y = 50;
         this.throwTimer = 0;
-        this.throwInterval = 10000000; // Throw a barrel every 2 seconds
+        this.throwInterval = 2000; // Throw a barrel every 2 seconds
         this.animationFrame = 0;
         this.animationSpeed = 0.1;
     }
@@ -54,8 +54,8 @@ class DonkeyKong {
 class Barrel {
     constructor(game, x, y) {
         this.game = game;
-        this.width = 24;
-        this.height = 24;
+        this.width = 18;
+        this.height = 18;
         this.x = x;
         this.y = y;
         this.speed = 2;
@@ -78,29 +78,43 @@ class Barrel {
         // Update rotation
         this.rotation += this.rotationSpeed;
 
-        // Check platform collisions
-        this.onPlatform = false;
+        // Check if barrel is on a platform
+        let onPlatform = false;
         for (const platform of this.game.level.platforms) {
             if (this.checkPlatformCollision(platform)) {
-                this.y = platform.y - this.height;
+                // Get the platform surface y-coordinate at the barrel's x position
+                const surfaceY = platform.getSurfaceY(this.x + this.width/2);
+                
+                // Place barrel on the platform surface
+                this.y = surfaceY - this.height;
                 this.velocityY = 0;
-                this.onPlatform = true;
+                onPlatform = true;
                 this.currentPlatform = platform;
 
-                // Calculate movement along the inclined platform
-                const platformAngle = platform.angle;
-                const moveX = Math.cos(platformAngle) * this.speed * this.direction;
-                const moveY = Math.sin(platformAngle) * this.speed * this.direction;
-                
-                this.x += moveX;
-                this.y += moveY;
+                // Move along the platform
+                this.x += this.speed * this.direction;
 
-                // Change direction at platform edges
+                // Check if barrel is at platform edge
                 if (this.x <= platform.x || this.x + this.width >= platform.x + platform.width) {
-                    this.direction *= -1;
-                    this.bounceCount++;
+                    // Let the barrel fall off the edge
+                    onPlatform = false;
+                    this.currentPlatform = null;
                 }
             }
+        }
+
+        // If not on any platform, let gravity take effect
+        if (!onPlatform) {
+            this.currentPlatform = null;
+        }
+
+        // Check canvas wall collisions
+        if (this.x <= 0) {
+            this.x = 0;
+            this.direction = 1; // Change direction to right
+        } else if (this.x + this.width >= this.game.canvas.width) {
+            this.x = this.game.canvas.width - this.width;
+            this.direction = -1; // Change direction to left
         }
 
         // Remove if out of bounds or after max bounces
@@ -113,18 +127,19 @@ class Barrel {
     }
 
     checkPlatformCollision(platform) {
-        // Transform barrel coordinates to platform space
-        const dx = this.x - platform.x;
-        const dy = this.y - platform.y;
-        const rotatedX = dx * Math.cos(-platform.angle) - dy * Math.sin(-platform.angle);
-        const rotatedY = dx * Math.sin(-platform.angle) + dy * Math.cos(-platform.angle);
+        // Check if barrel is within platform's x-range
+        if (this.x + this.width < platform.x || this.x > platform.x + platform.width) {
+            return false;
+        }
+
+        // Get the platform surface y-coordinate at the barrel's x position
+        const surfaceY = platform.getSurfaceY(this.x + this.width/2);
         
+        // Check if barrel is above the platform and moving downward
         return (
-            rotatedX < platform.width &&
-            rotatedX + this.width > 0 &&
-            rotatedY + this.height > 0 &&
-            rotatedY < platform.height &&
-            this.velocityY > 0
+            this.velocityY > 0 && 
+            this.y + this.height > surfaceY && 
+            this.y + this.height < surfaceY + 20
         );
     }
 
@@ -147,15 +162,22 @@ class Barrel {
         // Rotate the barrel
         this.game.ctx.rotate(this.rotation);
         
-        // Draw the barrel
+        // Draw the circular barrel
+        this.game.ctx.beginPath();
+        this.game.ctx.arc(0, 0, this.width/2, 0, Math.PI * 2);
         this.game.ctx.fillStyle = '#8B4513'; // Brown
-        this.game.ctx.fillRect(-this.width/2, -this.height/2, this.width, this.height);
+        this.game.ctx.fill();
         
-        // Draw barrel details
-        this.game.ctx.fillStyle = '#A0522D';
-        this.game.ctx.fillRect(-this.width/2, -this.height/2, this.width, 4);
-        this.game.ctx.fillRect(-this.width/2, -this.height/2 + 8, this.width, 4);
-        this.game.ctx.fillRect(-this.width/2, -this.height/2 + 16, this.width, 4);
+        // Draw barrel details (circular bands)
+        this.game.ctx.strokeStyle = '#A0522D';
+        this.game.ctx.lineWidth = 2;
+        
+        // Draw three circular bands
+        for (let i = -1; i <= 1; i++) {
+            this.game.ctx.beginPath();
+            this.game.ctx.arc(0, i * 4, this.width/2 - 2, 0, Math.PI * 2);
+            this.game.ctx.stroke();
+        }
         
         // Restore the context state
         this.game.ctx.restore();

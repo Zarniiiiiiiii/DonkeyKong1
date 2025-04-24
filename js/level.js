@@ -264,7 +264,7 @@ class Level {
         // Create Donkey Kong at the top left
         this.donkeyKong = new DonkeyKong(this.game);
         this.donkeyKong.x = 50;
-        this.donkeyKong.y = 100;
+        this.donkeyKong.y = 50;
     }
 
     createLadders() {
